@@ -37,17 +37,8 @@ def load_model(model_file_path: str = "") -> torch.nn.Module:
 
     if model_file_path != "":
         loaded_model = torch.load(model_file_path, map_location=torch.device('cpu'))
-        # loaded_model = torch.load(model_file_path)
-        # if not isinstance(loaded_model, OrderedDict):
-        #     raise TypeError(
-        #         f"Loaded model must be a model state dict of type OrderedDict. "
-        #         f"Received {type(loaded_model)}"
-        #     )
+        audio_model.load_state_dict(loaded_model)
 
-        net_prefix = 'actor_critic.net.goal_encoder.'
-        audio_model.load_state_dict({k.replace(net_prefix, ''): v
-                                     for k, v in loaded_model['state_dict'].items()
-                                     if k.startswith(net_prefix)})
     return audio_model
 
 

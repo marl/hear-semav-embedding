@@ -6,7 +6,7 @@ long_description = open("README.md", "r").read()
 setup(
     name="hear-savi",
     description="An HEAR API for SAVI AudioCNN",
-    version='0.0.4',
+    version='0.0.1',
     author="Sivan",
     author_email="siwen.d@columbia.edu",
     url="https://github.com/marl/hear-semav-embedding",

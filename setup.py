@@ -20,10 +20,7 @@ setup(
     packages=find_packages(exclude=("tests",)),
     python_requires=">=3.7",
     install_requires=[
-        "librosa",
         "typing",
-        "scikit-image",
-        "numba",
         "numpy",
         "torch",
         "torchaudio==0.11.0"

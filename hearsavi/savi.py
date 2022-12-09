@@ -101,8 +101,18 @@ def get_timestamp_embeddings(
     frames = frames.reshape(-1, frames.shape[1], frames.shape[3]) # reshape to stack binaural frames
 
     # convert frames to spectrograms
-    spectrograms = Tensor(compute_spectrogram(frames.cpu().detach().numpy())) # size * 65 * 26 * channel
-
+    spectrograms = compute_spectrogram(
+        frames,
+        win_length=AudioCNN.win_length,
+        hop_length=AudioCNN.hop_length,
+        n_fft=AudioCNN.n_fft,
+        n_mels=AudioCNN.n_mels,
+        window=model.window,
+        mel_scale=model.mel_scale,
+        downsample=AudioCNN.downsample,
+        include_gcc_phat=AudioCNN.include_gcc_phat,
+        backend="torch",
+    ) # size * 64 * 51 * (channel + nCr(channels, 2))
 
     # We're using a DataLoader to help with batching of frames
     dataset = torch.utils.data.TensorDataset(spectrograms)

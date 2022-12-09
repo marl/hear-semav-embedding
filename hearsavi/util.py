@@ -57,7 +57,7 @@ def compute_spectrogram(
             kernel_size=(downsample, downsample),
         ).squeeze(dim=0)
     # Convert to decibels
-    spectrogram = amplitude_to_DB(
+    spectrogram = F.amplitude_to_DB(
         spectrogram,
         multiplier=20.0,
         amin=1e-10,

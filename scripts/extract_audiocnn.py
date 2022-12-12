@@ -43,6 +43,7 @@ if __name__ == "__main__":
         "--net-prefix",
         type=str,
         help="Prefix corresponding to AudioCNN model dot path in SAVi model",
+        default="actor_critic.net.goal_encoder",
     )
     args = vars(parser.parse_args())
 

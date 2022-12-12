@@ -1,17 +1,15 @@
 """
 SAVI audio subnetwork model for HEAR.
-
 Adapted from
 https://github.com/marl/sound-spaces/tree/main/ss_baselines/savi
 """
 
-from collections import OrderedDict
 from typing import Tuple
 
+import numpy as np
+import librosa
 import torch
 import torch.fft
-import librosa
-import numpy as np
 from torch import Tensor
 from skimage.measure import block_reduce
 
@@ -43,7 +41,7 @@ def compute_spectrogram(audiogoal):
     return spectrogram
 
 
-def load_model(model_file_path: str = "", net_prefix: str = 'actor_critic.net.goal_encoder') -> torch.nn.Module:
+def load_model(model_file_path: str = "") -> torch.nn.Module:
     """
     Returns a torch.nn.Module that produces embeddings for audio.
     Args:
@@ -56,15 +54,8 @@ def load_model(model_file_path: str = "", net_prefix: str = 'actor_critic.net.go
 
     if model_file_path != "":
         loaded_model = torch.load(model_file_path, map_location=torch.device('cpu'))
-        if not net_prefix.endswith('.'):
-            net_prefix +=  '.'
-        audio_model.load_state_dict(
-            {
-                k.replace(net_prefix, ''): v
-                for k, v in loaded_model['state_dict'].items()
-                if k.startswith(net_prefix)
-            }
-        )
+        audio_model.load_state_dict(loaded_model)
+
     return audio_model
 
 

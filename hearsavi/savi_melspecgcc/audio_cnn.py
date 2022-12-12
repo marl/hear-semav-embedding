@@ -32,7 +32,7 @@ class AudioCNN(BaseAudioCNN):
             )
         )
         self._n_input_audio = self.num_channels # input channel 'spectrogram' (65, 26, 2)
-        self.register_buffer('window', torch.hann_window(self.win_length, device=self.device))
+        self.register_buffer('window', torch.hann_window(self.win_length))
         self.register_buffer('mel_scale',
             melscale_fbanks(
                 n_freqs=(self.n_fft // 2) + 1,
@@ -42,5 +42,5 @@ class AudioCNN(BaseAudioCNN):
                 sample_rate=self.sample_rate,
                 mel_scale="htk",
                 norm=None,
-            ).to(device=self.device)
+            )
         )

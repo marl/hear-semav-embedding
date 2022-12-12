@@ -1,8 +1,15 @@
 import torch
 from argparse import ArgumentParser
 
-# TODO: make sure this works w.r.t. the imports that torch.load
-# needs for the habitat stuff
+# import soundspaces/habitat stuff
+import soundspaces
+import soundspaces.simulator
+import habitat
+from habitat.config import Config
+from ss_baselines.common.env_utils import construct_envs, make_env_fn
+from ss_baselines.common.environments import get_env_class, AudioNavRLEnv
+from ss_baselines.savi.models.audio_cnn import AudioCNN
+from gym.spaces.box import Box
 
 
 def extract_audiocnn(model_path, output_path, net_prefix="actor_critic.net.goal_encoder"):

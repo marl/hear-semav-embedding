@@ -6,8 +6,8 @@ long_description = open("README.md", "r").read()
 setup(
     name="hear-savi",
     description="An HEAR API for SAVI AudioCNN",
-    version='0.0.1',
-    author="Sivan",
+    version='0.0.5',
+    author="Sivan Ding",
     author_email="siwen.d@columbia.edu",
     url="https://github.com/marl/hear-semav-embedding",
     license="LICENSE",
@@ -20,7 +20,10 @@ setup(
     packages=find_packages(exclude=("tests",)),
     python_requires=">=3.7",
     install_requires=[
+        "librosa",
         "typing",
+        "scikit-image",
+        "numba",
         "numpy",
         "torch",
         "torchaudio==0.11.0"

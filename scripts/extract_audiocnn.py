@@ -1,6 +1,9 @@
 import torch
 from argparse import ArgumentParser
 
+# TODO: make sure this works w.r.t. the imports that torch.load
+# needs for the habitat stuff
+
 
 def extract_audiocnn(model_path, output_path, net_prefix="actor_critic.net.goal_encoder"):
     saved_model = torch.load(model_path, map_location=torch.device('cpu'))

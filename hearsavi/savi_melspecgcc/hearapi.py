@@ -57,7 +57,10 @@ def compute_spectrogram(
     spectrogram = (torch.abs(stft) ** 2.0).to(dtype=torch.float32)
     # Apply the mel-scale filter to the power spectrogram
     if mel_scale is not None:
-        spectrogram = torch.matmul(spectrogram, mel_scale)
+        spectrogram = torch.matmul(
+            spectrogram.transpose(-1, -2),
+            mel_scale,
+        ).transpose(-1, -2)
     # Optionally downsample
     if downsample:
         spectrogram = torch.nn.functional.avg_pool2d(

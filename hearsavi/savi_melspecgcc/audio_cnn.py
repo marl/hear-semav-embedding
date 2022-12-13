@@ -30,7 +30,6 @@ class AudioCNN(BaseAudioCNN):
     scene_embedding_size = embedding_size
     timestamp_embedding_size = embedding_size
 
-
     def __init__(self):
         super().__init__(
             cnn_dims=(
@@ -40,8 +39,13 @@ class AudioCNN(BaseAudioCNN):
             # 2 audio channels + nCr(2, 2) GCC channels
             num_input_channels=(self.num_channels + nCr(self.num_channels, 2))
         )
-        self.register_buffer('window', torch.hann_window(self.win_length))
-        self.register_buffer('mel_scale',
+        self.register_buffer(
+            'window',
+            torch.hann_window(self.win_length),
+            persistent=False,
+        )
+        self.register_buffer(
+            'mel_scale',
             melscale_fbanks(
                 n_freqs=(self.n_fft // 2) + 1,
                 f_min=0,
@@ -50,5 +54,6 @@ class AudioCNN(BaseAudioCNN):
                 sample_rate=self.sample_rate,
                 mel_scale="htk",
                 norm=None,
-            )
+            ),
+            persistent=False,
         )

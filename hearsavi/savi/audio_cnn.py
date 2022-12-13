@@ -121,5 +121,4 @@ class AudioCNN(nn.Module):
 
     def forward(self, audio_observations):
         # input shape [BATCH x CHANNEL x HEIGHT X WIDTH] (batch, 2, 65, 26)
-        # permute tensor to dimension 
         return self.cnn(audio_observations)

@@ -20,9 +20,9 @@ class AudioCNN(nn.Module):
     scene_embedding_size = embedding_size
     timestamp_embedding_size = embedding_size
 
-    def __init__(self, cnn_dims=(65, 26)):
+    def __init__(self, cnn_dims=(65, 26), num_input_channels=None):
         super().__init__()
-        self._n_input_audio = self.num_channels # input channel 'spectrogram' (65, 26, 2)
+        self._n_input_audio = (num_input_channels or self.num_channels) # input channel 'spectrogram' (65, 26, 2)
 
         cnn_dims = np.array(cnn_dims, dtype=np.float32) # single channel spectrogram shape
 

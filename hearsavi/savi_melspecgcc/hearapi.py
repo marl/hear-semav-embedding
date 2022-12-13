@@ -111,7 +111,7 @@ def compute_spectrogram(
 
     # Reshape to how SoundSpaces expects
     # return shape (audio_batches, num_frames, num_channels, num_freq, num_time)
-    return spectrogram.permute(0, 2, 1, 3, 4)
+    return spectrogram.transpose(1, 2)
     
 
 def load_model(model_file_path: str = "") -> torch.nn.Module:

@@ -34,29 +34,22 @@ def compute_spectrogram(
     window: Optional[torch.Tensor],
     mel_scale: Optional[torch.Tensor],
     downsample: Optional[int],
-    include_gcc_phat: bool,
-    backend: str = "torch",
+    include_gcc_phat: bool
 ):
-    assert backend in ("torch", "numpy")
-    # stft.shape = (C=2, T, F)
-    stft = torch.stack(
-        [
-            torch.stft(
-                input=torch.tensor(X_ch, device='cpu', dtype=torch.float32),
-                win_length=win_length,
-                hop_length=hop_length,
-                n_fft=n_fft,
-                center=True,
-                window=(
-                    window if window is not None
-                    else torch.hann_window(win_length, device="cpu")
-                ),
-                pad_mode="constant", # constant for zero padding
-                return_complex=True,
-            ).T
-            for X_ch in audio_data
-        ],
-        dim=0
+    # audio_data.shape = (audio_batches, num_channels, num_frames, frame_size)
+    # stft.shape = (audio_batches, num_channels, num_frames, num_freq, num_time)
+    stft = torch.stft(
+        input=torch.tensor(audio_data, device='cpu', dtype=torch.float32),
+        win_length=win_length,
+        hop_length=hop_length,
+        n_fft=n_fft,
+        center=True,
+        window=(
+            window if window is not None
+            else torch.hann_window(win_length, device="cpu")
+        ),
+        pad_mode="constant", # constant for zero padding
+        return_complex=True,
     )
     # Compute power spectrogram
     spectrogram = (torch.abs(stft) ** 2.0).to(dtype=torch.float32)
@@ -66,9 +59,9 @@ def compute_spectrogram(
     # Optionally downsample
     if downsample:
         spectrogram = torch.nn.functional.avg_pool2d(
-            spectrogram.unsqueeze(dim=0),
+            spectrogram,
             kernel_size=(downsample, downsample),
-        ).squeeze(dim=0)
+        )
     # Convert to decibels
     spectrogram = amplitude_to_DB(
         spectrogram,
@@ -77,29 +70,33 @@ def compute_spectrogram(
         db_multiplier=0.0,
         top_db=80,
     )
+    # stft.shape = (audio_batches, num_channels, num_frames, num_freq, num_time)
+    stft.permute(0, 1, 2, 4, 3)
+    # input shape [BATCH x HEIGHT X WIDTH x CHANNEL ] (batch, 65, 26, 2)
 
     if include_gcc_phat:
-        num_channels = stft.shape[0]
+        num_channels = stft.shape[1]
         n_freqs = n_mels if (mel_scale is not None) else ((n_fft // 2) + 1)
         # compute gcc_phat : (comb, T, F)
+        # compute gcc_phat : (audio_batches, nCr(num_channels, 2), num_frames, num_freq, num_time)
         out_list = []
         for ch1 in range(num_channels - 1):
             for ch2 in range(ch1 + 1, num_channels):
-                x1 = stft[ch1]
-                x2 = stft[ch2]
+                x1 = stft[:, ch1, ...]
+                x2 = stft[:, ch2, ...]
                 xcc = torch.angle(x1 * torch.conj(x2))
                 xcc = torch.exp(1j * xcc.type(torch.complex64))
-                gcc_phat = torch.fft.irfft(xcc)
+                gcc_phat = torch.fft.irfft(xcc, dim=-2)
                 # Just get a subset of GCC values to match dimensionality
                 gcc_phat = torch.cat(
                     [
                         gcc_phat[..., -n_freqs // 2:],
                         gcc_phat[..., :n_freqs // 2],
                     ],
-                    dim=-1,
+                    dim=-2,
                 )
                 out_list.append(gcc_phat)
-        gcc_phat = torch.stack(out_list, dim=0)
+        gcc_phat = torch.stack(out_list, dim=1)
 
         # Downsample
         if downsample:
@@ -108,16 +105,10 @@ def compute_spectrogram(
                 kernel_size=(downsample, downsample),
             )
 
-        # spectrogram.shape = (C=3, T, F)
-        spectrogram = torch.cat([spectrogram, gcc_phat], dim=0)
+        spectrogram = torch.cat([spectrogram, gcc_phat], dim=1)
 
     # Reshape to how SoundSpaces expects
-    # spectrogram.shape = (F, T, C)
-    spectrogram = spectrogram.permute(2, 1, 0)
-    if backend == "torch":
-        return spectrogram
-    elif backend == "numpy":
-        return spectrogram.numpy().astype(np.float32)
+    return spectrogram.transpose(0, 2, 3, 4, 1)
     
 
 def load_model(model_file_path: str = "") -> torch.nn.Module:
@@ -191,11 +182,7 @@ def get_timestamp_embeddings(
         sample_rate=AudioCNN.sample_rate,
     ) # frames: (n_sounds, 2 num_channels, num_frames, 16000 frame_size)
     # Remove channel dimension for mono model
-    frames = frames.squeeze(dim=1) # ignore for binaural
     audio_batches, num_channels, num_frames, frame_size = frames.shape
-    # frames = frames.flatten(end_dim=1)
-    # stack first two dimensions so for mono it's (sounds*frames, frame size)
-    frames = frames.reshape(-1, frames.shape[1], frames.shape[3]) # reshape to stack binaural frames
 
     # convert frames to spectrograms
     spectrograms = compute_spectrogram(
@@ -208,8 +195,7 @@ def get_timestamp_embeddings(
         mel_scale=model.mel_scale,
         downsample=AudioCNN.downsample,
         include_gcc_phat=AudioCNN.include_gcc_phat,
-        backend="torch",
-    ) # size * 64 * 51 * (channel + nCr(channels, 2))
+    ) # n_sounds * n_timestamps * 64 * 51 * (channel + nCr(channels, 2))
 
     # We're using a DataLoader to help with batching of frames
     dataset = torch.utils.data.TensorDataset(spectrograms)

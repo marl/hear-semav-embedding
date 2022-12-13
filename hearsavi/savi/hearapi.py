@@ -25,18 +25,16 @@ n_fft = 512
 BATCH_SIZE = 512
 
 
-def compute_spectrogram(audiogoal):
-    def compute_stft(signal):
-        n_fft = 512
-        hop_length = 160
-        win_length = 400
-        stft = np.abs(librosa.stft(signal, n_fft=n_fft, hop_length=hop_length, win_length=win_length))
-        stft = block_reduce(stft, block_size=(1, 4, 4), func=np.mean) # downsampling
-        return stft
-
-    channel1_magnitude = np.log1p(compute_stft(audiogoal[:,0])) # n_sounds * first channel samples
-    channel2_magnitude = np.log1p(compute_stft(audiogoal[:,1]))
-    spectrogram = np.stack([channel1_magnitude, channel2_magnitude], axis=-1)
+def compute_spectrogram(signal):
+    n_fft = 512
+    hop_length = 160
+    win_length = 400
+    # signal.shape = (num_batch, num_channel, num_frames, frame_size)
+    mag = np.abs(librosa.stft(signal, n_fft=n_fft, hop_length=hop_length, win_length=win_length))
+    # mag.shape = (num_batch, num_channel, num_frames, num_freq, num_time)
+    mag = block_reduce(mag, block_size=(1, 1, 1, 4, 4), func=np.mean) # downsampling
+    spectrogram = np.log1p(mag)
+    # spectrogram.shape = (num_batch, num_channel, num_frames, num_freq/4, num_time/4)
 
     return spectrogram
 
@@ -108,16 +106,14 @@ def get_timestamp_embeddings(
         hop_size=hop_size,
         sample_rate=AudioCNN.sample_rate,
     ) # frames: (n_sounds, 2 num_channels, num_frames, 16000 frame_size)
-    # Remove channel dimension for mono model
-    frames = frames.squeeze(dim=1) # ignore for binaural
     audio_batches, num_channels, num_frames, frame_size = frames.shape
     # frames = frames.flatten(end_dim=1)
-    # stack first two dimensions so for mono it's (sounds*frames, frame size)
-    frames = frames.reshape(-1, frames.shape[1], frames.shape[3]) # reshape to stack binaural frames
-
     # convert frames to spectrograms
     spectrograms = Tensor(compute_spectrogram(frames.cpu().detach().numpy())) # size * 65 * 26 * channel
 
+    # spectrogram.shape = (num_batch, num_channel, num_frames, num_freq/4, num_time/4)
+    spectrograms = spectrograms.permute(0, 2, 3, 4, 1).reshape(-1, *frames.shape[2:])
+    # input shape [BATCH x HEIGHT X WIDTH x CHANNEL ] (batch, num_freq, num_time, num_channels)
 
     # We're using a DataLoader to help with batching of frames
     dataset = torch.utils.data.TensorDataset(spectrograms)

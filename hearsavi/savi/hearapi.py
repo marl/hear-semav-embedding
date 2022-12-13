@@ -35,8 +35,8 @@ def compute_spectrogram(signal):
     mag = block_reduce(mag, block_size=(1, 1, 1, 4, 4), func=np.mean) # downsampling
     spectrogram = np.log1p(mag)
     # spectrogram.shape = (num_batch, num_channel, num_frames, num_freq/4, num_time/4)
-
-    return spectrogram
+    # return (num_batch, num_frames, num_channel, num_freq/4, num_time/4)
+    return spectrogram.permute(0, 2, 1, 3, 4)
 
 
 def load_model(model_file_path: str = "") -> torch.nn.Module:
@@ -111,9 +111,9 @@ def get_timestamp_embeddings(
     # convert frames to spectrograms
     spectrograms = Tensor(compute_spectrogram(frames.cpu().detach().numpy())) # size * 65 * 26 * channel
 
-    # spectrogram.shape = (num_batch, num_channel, num_frames, num_freq/4, num_time/4)
-    spectrograms = spectrograms.permute(0, 2, 3, 4, 1).reshape(-1, *frames.shape[2:])
-    # input shape [BATCH x HEIGHT X WIDTH x CHANNEL ] (batch, num_freq, num_time, num_channels)
+    # spectrogram.shape = (num_batch, num_frames, num_channel, num_freq/4, num_time/4)
+    # input shape [BATCH x CHANNEL x HEIGHT X WIDTH] (batch, 2, num_freq/4, num_time/4)
+    spectrograms = spectrograms.flatten(end_dim=1)
 
     # We're using a DataLoader to help with batching of frames
     dataset = torch.utils.data.TensorDataset(spectrograms)
@@ -125,7 +125,7 @@ def get_timestamp_embeddings(
     # Iterate over all batches and accumulate the embeddings for each frame.
     model.eval()
     with torch.no_grad():
-        embeddings_list = [model(batch[0]) for batch in loader]
+        embeddings_list = [model(batch) for batch in loader]
 
     # Concatenate mini-batches back together and unflatten the frames
     # to reconstruct the audio batches

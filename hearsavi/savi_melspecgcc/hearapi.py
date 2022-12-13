@@ -37,9 +37,9 @@ def compute_spectrogram(
     include_gcc_phat: bool
 ):
     # audio_data.shape = (audio_batches, num_channels, num_frames, frame_size)
-    # stft.shape = (audio_batches, num_channels, num_frames, num_freq, num_time)
+    num_sounds, num_channels, num_frames, frame_size = audio_data.shape
     stft = torch.stft(
-        input=torch.tensor(audio_data, device='cpu', dtype=torch.float32),
+        input=audio_data.reshape(-1, audio_data.shape[-1]),
         win_length=win_length,
         hop_length=hop_length,
         n_fft=n_fft,
@@ -51,6 +51,8 @@ def compute_spectrogram(
         pad_mode="constant", # constant for zero padding
         return_complex=True,
     )
+    stft = stft.reshape(num_sounds, num_channels, num_frames, *stft.shape[-2:])
+    # stft.shape = (audio_batches, num_channels, num_frames, num_freq, num_time)
     # Compute power spectrogram
     spectrogram = (torch.abs(stft) ** 2.0).to(dtype=torch.float32)
     # Apply the mel-scale filter to the power spectrogram
@@ -71,11 +73,8 @@ def compute_spectrogram(
         top_db=80,
     )
     # stft.shape = (audio_batches, num_channels, num_frames, num_freq, num_time)
-    stft.permute(0, 1, 2, 4, 3)
-    # input shape [BATCH x HEIGHT X WIDTH x CHANNEL ] (batch, 65, 26, 2)
 
     if include_gcc_phat:
-        num_channels = stft.shape[1]
         n_freqs = n_mels if (mel_scale is not None) else ((n_fft // 2) + 1)
         # compute gcc_phat : (comb, T, F)
         # compute gcc_phat : (audio_batches, nCr(num_channels, 2), num_frames, num_freq, num_time)
@@ -108,7 +107,8 @@ def compute_spectrogram(
         spectrogram = torch.cat([spectrogram, gcc_phat], dim=1)
 
     # Reshape to how SoundSpaces expects
-    return spectrogram.transpose(0, 2, 3, 4, 1)
+    # return shape (audio_batches, num_frames, num_channels, num_freq, num_time)
+    return spectrogram.permute(0, 2, 1, 3, 4)
     
 
 def load_model(model_file_path: str = "") -> torch.nn.Module:
@@ -196,6 +196,7 @@ def get_timestamp_embeddings(
         downsample=AudioCNN.downsample,
         include_gcc_phat=AudioCNN.include_gcc_phat,
     ) # n_sounds * n_timestamps * 64 * 51 * (channel + nCr(channels, 2))
+    spectrograms = spectrograms.flatten(end_dim=1)
 
     # We're using a DataLoader to help with batching of frames
     dataset = torch.utils.data.TensorDataset(spectrograms)
@@ -207,7 +208,7 @@ def get_timestamp_embeddings(
     # Iterate over all batches and accumulate the embeddings for each frame.
     model.eval()
     with torch.no_grad():
-        embeddings_list = [model(batch[0]) for batch in loader]
+        embeddings_list = [model(batch) for batch in loader]
 
     # Concatenate mini-batches back together and unflatten the frames
     # to reconstruct the audio batches

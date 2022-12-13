@@ -120,13 +120,6 @@ class AudioCNN(nn.Module):
                     nn.init.constant_(layer.bias, val=0)
 
     def forward(self, audio_observations):
-        cnn_input = []
-
-        # input shape [BATCH x HEIGHT X WIDTH x CHANNEL ] (batch, 65, 26, 2)
-        # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
-        audio_observations = audio_observations.permute(0, 3, 1, 2)
-        cnn_input.append(audio_observations)
-
-        cnn_input = torch.cat(cnn_input, dim=1)
-
-        return self.cnn(cnn_input)
+        # input shape [BATCH x CHANNEL x HEIGHT X WIDTH] (batch, 2, 65, 26)
+        # permute tensor to dimension 
+        return self.cnn(audio_observations)

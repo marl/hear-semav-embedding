@@ -92,8 +92,8 @@ def compute_spectrogram(
                 # Just get a subset of GCC values to match dimensionality
                 gcc_phat = torch.cat(
                     [
-                        gcc_phat[..., -n_freqs // 2:],
-                        gcc_phat[..., :n_freqs // 2],
+                        gcc_phat[..., -n_freqs // 2:, :],
+                        gcc_phat[..., :n_freqs // 2, :],
                     ],
                     dim=-2,
                 )

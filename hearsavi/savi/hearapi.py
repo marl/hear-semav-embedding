@@ -36,7 +36,7 @@ def compute_spectrogram(signal):
     spectrogram = np.log1p(mag)
     # spectrogram.shape = (num_batch, num_channel, num_frames, num_freq/4, num_time/4)
     # return (num_batch, num_frames, num_channel, num_freq/4, num_time/4)
-    return spectrogram.transpose(1, 2)
+    return spectrogram.swapaxes(1, 2)
 
 
 def load_model(model_file_path: str = "") -> torch.nn.Module:

@@ -17,7 +17,7 @@ from hearsavi.util import frame_audio
 from hearsavi.savi_melspecgcc.audio_cnn import AudioCNN
 
 # Default hop_size in milliseconds
-TIMESTAMP_HOP_SIZE = 50
+TIMESTAMP_HOP_SIZE = 100
 SCENE_HOP_SIZE = 250
 n_fft = 512
 
